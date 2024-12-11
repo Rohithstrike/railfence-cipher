@@ -9,12 +9,6 @@ display_banner() {
     echo "  ██║   ██║██╔══██║██║██║     ██╔══╝  "
     echo "  ╚██████╔╝██║  ██║██║███████╗███████╗"
     echo "   ╚═════╝ ╚═╝  ╚═╝╚═╝╚══════╝╚══════╝"
-    echo "  ██████╗ ██╗███████╗███████╗███████╗"
-    echo "  ██╔══██╗██║██╔════╝██╔════╝██╔════╝"
-    echo "  ██████╔╝██║█████╗  █████╗  █████╗  "
-    echo "  ██╔═══╝ ██║██╔══╝  ██╔══╝  ██╔══╝  "
-    echo "  ██║     ██║███████╗███████╗███████╗"
-    echo "  ╚═╝     ╚═╝╚══════╝╚══════╝╚══════╝"
     echo "   Created by Rohith with ♥          "
     echo "===================================="
 }
@@ -33,31 +27,42 @@ encrypt() {
         rail[$i]=""
     done
 
-    # Adjust offset to a valid starting row (wrap around)
-    offset=$(( offset % rails ))
+    # Adjust offset to a valid range
+    offset=$((offset % (rails * 2 - 2)))
 
-    # Populate rails based on zig-zag traversal
-    local row=$offset
+    # Apply offset to the starting position
+    local current_offset=$offset
+    for ((i = 0; i < current_offset; i++)); do
+        plaintext=" ${plaintext}"
+    done
+
+    length=${#plaintext}
+
+    # Populate rails with characters based on zig-zag traversal
+    local row=0
     local dir_down=1
     for ((i = 0; i < length; i++)); do
         rail[$row]+="${plaintext:i:1}"
+
+        if ((row == 0)); then
+            dir_down=1
+        elif ((row == rails - 1)); then
+            dir_down=0
+        fi
+
         if ((dir_down == 1)); then
             ((row++))
         else
             ((row--))
         fi
-
-        if ((row == 0 || row == rails - 1)); then
-            dir_down=$((1 - dir_down))
-        fi
     done
 
-    # Concatenate all rails to form the encrypted message
+    # Concatenate all rails to form the encrypted text
     for ((i = 0; i < rails; i++)); do
         cipher+=${rail[$i]}
     done
 
-    echo "$cipher"
+    echo "${cipher// /}"
 }
 
 # Function to decrypt using Rail Fence Cipher with offset
@@ -69,61 +74,66 @@ decrypt() {
     local plaintext=""
     local rail=()
     local mark=()
-    local position=0
+    local pos=0
 
     # Initialize rails
     for ((i = 0; i < rails; i++)); do
         rail[$i]=""
     done
 
-    # Adjust offset to a valid starting row (wrap around)
-    offset=$(( offset % rails ))
+    # Adjust offset to a valid range
+    offset=$((offset % (rails * 2 - 2)))
 
-    # Mark zig-zag traversal
+    # Mark the positions based on zig-zag pattern
     local row=$offset
     local dir_down=1
     for ((i = 0; i < length; i++)); do
         mark[$i]=$row
+
+        if ((row == 0)); then
+            dir_down=1
+        elif ((row == rails - 1)); then
+            dir_down=0
+        fi
+
         if ((dir_down == 1)); then
             ((row++))
         else
             ((row--))
         fi
-
-        if ((row == 0 || row == rails - 1)); then
-            dir_down=$((1 - dir_down))
-        fi
     done
 
-    # Fill rails with characters from the cipher text
+    # Fill the rails with characters from the cipher text
     for ((i = 0; i < rails; i++)); do
         for ((j = 0; j < length; j++)); do
             if ((mark[j] == i)); then
-                rail[$i]+="${cipher:position:1}"
-                ((position++))
+                rail[$i]+="${cipher:pos:1}"
+                ((pos++))
             fi
         done
     done
 
-    # Read characters back in zig-zag order
-    row=$offset
+    # Read characters back from the rails in zig-zag order
+    row=0
     dir_down=1
     for ((i = 0; i < length; i++)); do
         plaintext+=${rail[$row]:0:1}
         rail[$row]=${rail[$row]:1}
 
+        if ((row == 0)); then
+            dir_down=1
+        elif ((row == rails - 1)); then
+            dir_down=0
+        fi
+
         if ((dir_down == 1)); then
             ((row++))
         else
             ((row--))
         fi
-
-        if ((row == 0 || row == rails - 1)); then
-            dir_down=$((1 - dir_down))
-        fi
     done
 
-    echo "$plaintext"
+    echo "${plaintext// /}"
 }
 
 # Main script starts here
@@ -153,7 +163,7 @@ while true; do
                 echo "Decrypted Text: $decrypted_text"
                 read -p "Is this correct? (y/n): " confirm
                 if [[ $confirm == "y" ]]; then
-                    echo "Thanks for using the Rail Fence Cipher Tool!"
+                    echo "Thank you!"
                     exit 0
                 else
                     echo "Try again with a different number of rails or offset."
